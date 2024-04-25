@@ -3,7 +3,7 @@ RUN yum install -y zip
 RUN pip install setuptools build
 WORKDIR /build
 
-ADD pyproject.toml setup.cfg .
+ADD pyproject.toml setup.cfg ./
 ADD src/ ./src/
 RUN python -m build
 RUN pip install --target /lambda/ ./dist/*.tar.gz
