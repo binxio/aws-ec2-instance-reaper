@@ -56,7 +56,7 @@ Resources:
             Condition: {}
       Path: /
       Policies:
-        - PolicyName: CFNSecretProviderBuilder
+        - PolicyName: LamdbaCodeBuilder
           PolicyDocument:
             Statement:
               - Effect: Allow
@@ -67,9 +67,8 @@ Resources:
                   - !Sub 'arn:aws:s3:::${S3BucketPrefix}-*'
               - Effect: Allow
                 Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:PutObjectAcl
+                  - s3:GetObject*
+                  - s3:PutObject*
                 Resource: 
                   - !Sub 'arn:aws:s3:::${S3BucketPrefix}-*/lambdas/aws-ec2-instance-reaper-*'
               - Effect: Allow
@@ -86,7 +85,6 @@ Resources:
               - Sid: CloudWatchLogsPolicy
                 Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource:
