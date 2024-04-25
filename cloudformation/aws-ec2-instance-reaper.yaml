@@ -27,11 +27,13 @@ Resources:
           - UsePublicBucket
           - !Sub 'binxio-public-${AWS::Region}'
           - !Ref 'LambdaS3Bucket'
-        S3Key:  lambdas/aws-ec2-instance-reaper-0.1.0--dirty.zip
+        S3Key:  lambdas/aws-ec2-instance-reaper-0.1.0-6c961ac-dirty.zip
       Handler: aws_ec2_instance_reaper.handler
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.9
       Timeout: 60
+      LoggingConfig:
+        LogGroup: !Ref LogGroup
 
   LambdaRole:
     Type: AWS::IAM::Role
@@ -57,9 +59,9 @@ Resources:
                 Action:
                   - ec2:TerminateInstances
                   - ec2:StopInstances
-                Resource: "*"
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*"
                 Condition:
-                  StringEquals:
+                  StringLike:
                     "aws:ResourceTag/ExpiresAfter": "*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
@@ -74,11 +76,17 @@ Resources:
   AWSEC2InstanceReaperSchedule:
     Type: AWS::Events::Rule
     Properties:
-      Name: stop-old-aws-ec2-instance-machines
+      Name: reap-aws-ec2-instance-machines
       Description: reap expired EC2 instances every hour
       ScheduleExpression: 'rate(1 hour)'
       State: ENABLED
       Targets:
-        - Id: aws-ec2-instance-build-reaper
+        - Id: aws-ec2-instance-reaper
           Arn: !GetAtt AWSEC2InstanceReaper.Arn
           Input: '{"dry_run": false, "tags": []}'
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '/aws/lambda/aws-ec2-instance-reaper'
+      RetentionInDays: !Ref LogRetentionInDays
