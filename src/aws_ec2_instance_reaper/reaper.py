@@ -20,6 +20,8 @@ def list_ephemeral_instances(ec2: BaseClient, tags: List[Tag]) -> List[EC2Instan
     for response in paginator.paginate(Filters=ReaperTagFilter(tags).to_api()):
         for reservation in response["Reservations"]:
             for instance in map(lambda i: EC2Instance(i), reservation["Instances"]):
+                if instance.state == "terminated":
+                    continue
                 if instance.expiration_action and instance.expires_after:
                     log.debug(
                         "found instance %s launched %s, now in state %s",
