@@ -1,0 +1,21 @@
+FROM --platform linux/amd64 public.ecr.aws/lambda/python:3.9
+RUN yum install -y zip
+RUN pip install setuptools build
+WORKDIR /build
+
+ADD pyproject.toml setup.cfg .
+ADD src/ ./src/
+RUN python -m build
+RUN pip install --target /lambda/ ./dist/*.tar.gz
+
+RUN find /lambda -type d -print0 | xargs -0 chmod ugo+rx && \
+    find /lambda -type f -print0 | xargs -0 chmod ugo+r
+
+RUN python -m compileall -q /lambda
+
+ARG ZIPFILE=lambda.zip
+RUN cd /lambda && zip --quiet -9r /${ZIPFILE}  .
+
+FROM scratch
+ARG ZIPFILE
+COPY --from=0 /${ZIPFILE} /

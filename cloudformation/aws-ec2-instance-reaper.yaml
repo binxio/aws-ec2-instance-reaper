@@ -1,0 +1,84 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS EC2 instance reaper
+Parameters:
+  LambdaS3Bucket:
+    Type: String
+    Default: ''
+  LogRetentionInDays:
+    Description: 'to apply to log groups without retention'
+    Type: Number
+    Default: 30
+    MinValue: 1
+
+Conditions:
+  UsePublicBucket: !Equals
+    - !Ref 'LambdaS3Bucket'
+    - ''
+
+Resources:
+  AWSEC2InstanceReaper:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: reap empheral EC2 instances
+      FunctionName: aws-ec2-instance-reaper
+      Code:
+        S3Bucket: !If
+          - UsePublicBucket
+          - !Sub 'binxio-public-${AWS::Region}'
+          - !Ref 'LambdaS3Bucket'
+        S3Key:  lambdas/aws-ec2-instance-reaper-0.1.0--dirty.zip
+      Handler: aws_ec2_instance_reaper.handler
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: python3.9
+      Timeout: 60
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AWSEC2InstanceReaper
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:TerminateInstances
+                  - ec2:StopInstances
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ExpiresAfter": "*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  AWSEC2InstanceReaperSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt AWSEC2InstanceReaper.Arn
+      Principal: events.amazonaws.com
+
+  AWSEC2InstanceReaperSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: stop-old-aws-ec2-instance-machines
+      Description: reap expired EC2 instances every hour
+      ScheduleExpression: 'rate(1 hour)'
+      State: ENABLED
+      Targets:
+        - Id: aws-ec2-instance-build-reaper
+          Arn: !GetAtt AWSEC2InstanceReaper.Arn
+          Input: '{"dry_run": false, "tags": []}'
