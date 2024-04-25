@@ -83,9 +83,7 @@ deploy-pipeline:				## to your AWS account
 	aws cloudformation deploy \
 	--capabilities CAPABILITY_IAM \
 	--stack-name $(NAME)-pipeline \
-	--template-file ./cloudformation/cicd-pipeline.yaml \
-	--parameter-overrides \
-	S3BucketPrefix=$(S3_BUCKET_PREFIX)-$(AWS_REGION)
+	--template-file ./cloudformation/cicd-pipeline.yaml
 
 delete-pipeline:				## from your AWS account
 	aws cloudformation delete-stack --stack-name $(NAME)-pipeline

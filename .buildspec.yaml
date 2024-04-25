@@ -9,7 +9,7 @@ phases:
     runtime-versions:
       python: 3.9
     commands:
-      - pip install --upgrade setuptools twine tox
+      - pip install setuptools twine tox
   build:
     commands:
       - '[ "$LAMBDA_BUCKET_PREFIX" != "binxio-public" ] || make upload-dist'
